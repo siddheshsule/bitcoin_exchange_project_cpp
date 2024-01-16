@@ -68,10 +68,7 @@ class Bitcoin {
 
 
 int main() {
+    
 
-    Bitcoin bitcoin;
-    bitcoin.fetchBitcoinData();
-
-    std::cout << "Hello, world!" << std::endl;
 
 }
