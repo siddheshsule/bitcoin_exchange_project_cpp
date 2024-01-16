@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 #include <array>
+#include <string>
 #include <cstdio>
 
 #include <curl/curl.h>
@@ -12,8 +13,8 @@ typedef std::unique_ptr<CURL, std::function<void(CURL*)>> CURL_ptr;
 
 
 extern "C" std::size_t dataHandler(const char* buffer, std::size_t size,
-    std::size_t nmemb, std::string userDate) {
-        if (userDate == nullptr) {
+    std::size_t nmemb, std::string* userData) {
+        if (userData == nullptr) {
             return 0;
         }
         userData->append(buffer, (size* nmemb));
@@ -27,11 +28,12 @@ class CurlHandle {
             curl_easy_cleanup(c);
             curl_global_cleanup();
         };
+        std::string data;
     public:
         CurlHandle() : curlptr(curl_easy_init(), deleter) {
             curl_global_init(CURL_GLOBAL_ALL);
-            curl_easy_setopt(curlptr.get(), CURLOPT_WRITERFUNCTION, dataHandler);
-            curl_easy_setopt(curlptr.get(), CURL_WRITEDATA, &data);
+            curl_easy_setopt(curlptr.get(), CURLOPT_WRITEFUNCTION, dataHandler);
+            curl_easy_setopt(curlptr.get(), CURLOPT_WRITEDATA, &data);
             
         }
 
@@ -62,13 +64,25 @@ class Bitcoin {
 
         json fetchBitcoinData() {
             curlHandle.fetch();
-            return json::parse(curlHandle.getFetehedData());
+            return json::parse(curlHandle.getFetchedData());
         }
 };
 
 
 int main() {
-    
+    using namespace std;
+    using json = nlohmann::json;
 
+    try{
+        Bitcoin bitcoin;
+        json bitcoinData = bitcoin.fetchBitcoinData();
 
+        cout << "1 BTC = \n";
+        for (auto it = bitcoinData.begin(); it != bitcoinData.end(); ++it) {
+            printf("\t(%3s)%10d %s\n", it.key().c_str(), it.value()["last"].get<int>(), it.value()["symbol"].get<string>().c_str());
+        }
+    }
+    catch(...) {
+        cerr << "Failed to fetch Bitcoin exchange rates!";
+    }
 }
